@@ -73,11 +73,29 @@ typedef struct ship_struct {
 } ship_struct;
 
 typedef struct alien_struct {
-    char al[10];
     coord position;
     int type;
+    int visible;
 } alien_struct;
 
+
+// \ | /
+//      
+// / | \
+
+//  \ / 
+// |O O|
+// /( )\
+
+//  / \ 
+// (O O)
+// /^ ^\
+
+char alien_img[3][10] = {
+    " \\ / |O O|/( )\\",
+    " / \\ (O O)/^ ^\\",
+    "\\ | /     / | \\"
+};
 
 
 
@@ -171,16 +189,21 @@ void print_tab() {
 }
 
 
+
 void alien_constructor(alien_struct *aliens) {
-    putchar(' ');
-    
+    for (int i = 0; i < 50; i++) {
+        aliens->type = 0;
+        aliens->position.x = 0;
+        aliens->position.y = 0;
+        aliens->visible = 1;
+        aliens++;
+    }
 }
-     
+
 
 
 int main() {
     double start_t, end_t;
-    alien_struct aliens[5][10];
     ws = window_size();
     x_border_init = (ws.x - x_size) / 2;
     x_border_fin = x_border_init + x_size;
@@ -195,6 +218,20 @@ int main() {
     ship.position.y = y_border_fin - 3;
 
     print_ship();
+
+    alien_struct aliens[5][10];
+    alien_constructor(&aliens);
+
+    for (int i = 0; i < 5; i++)
+        for (int j = 0; j < 10; j++) {
+            print_coord((x_border_fin - x_border_init) / 2, 1, ' ');
+        }
+
+
+
+
+
+
 
     printf("\e[?25l"); //desativar cursor
     struct termios oldt, newt;
