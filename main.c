@@ -8,6 +8,7 @@
 #include<wchar.h>
 
 
+
 typedef struct coord {
     int x;
     int y;
@@ -117,11 +118,31 @@ void print_ship() {
     for (int i = 0; i < 10; i++){
         if(ship.old_position.x + (i - ((i / 5) * 5) - 2) != ship.position.x + (i - ((i / 5) * 5) - 2))
             print_coord(ship.old_position.x + (i - ((i / 5) * 5) - 2), ship.old_position.y - !(i / 5), ' ');
+        printf("\033[0;37m"); //branco
         print_coord(ship.position.x + (i - ((i / 5) * 5) - 2), ship.position.y - !(i / 5), ship.sps[i]);
         
     }
     ship.old_position.x = ship.position.x;
     ship.old_position.y = ship.position.y;
+}
+
+void print_shot() {
+    for (int i = 0; i < 3; i++) {
+        if(ship.shots[i].visible){
+            if(ship.shots[i].position.y <= y_border_init){
+                ship.shots[i].visible = 0;
+                print_coord(ship.shots[i].position.x, ship.shots[i].position.y, ' ');
+                continue;
+            }
+            ship.shots[i].position.y--;
+            print_coord(ship.shots[i].old_position.x, ship.shots[i].old_position.y, ' ');
+            printf("\033[0;34m"); //azul
+            print_coord(ship.shots[i].position.x, ship.shots[i].position.y, '|');
+            ship.shots[i].old_position.x = ship.shots[i].position.x;
+            ship.shots[i].old_position.y = ship.shots[i].position.y;
+        }
+    }
+    
 }
 
 
@@ -135,6 +156,7 @@ void print_tab() {
     printf("%d %d \n", ws.x, ws.y);
     for (int y = 0; y < ws.y; y++)
         for (int x = 0; x < ws.x; x++) {
+            printf("\033[0;32m"); //amarelo
             if ((x == x_border_init && y >= y_border_init && y <= y_border_fin) || (x == x_border_fin && y >= y_border_init && y <= y_border_fin))
                 putchar('#');
             else if ((y == y_border_init && x >= x_border_init && x <= x_border_fin) || (y == y_border_fin && x >= x_border_init && x <= x_border_fin))
@@ -159,10 +181,6 @@ void alien_constructor(alien_struct *aliens) {
 
 int main() {
     double start_t, end_t;
-    
-    printf("%lf", start_t);
-
-
     alien_struct aliens[5][10];
     ws = window_size();
     x_border_init = (ws.x - x_size) / 2;
@@ -192,44 +210,44 @@ int main() {
     oldf = fcntl(STDIN_FILENO, F_GETFL, 0);
     fcntl(STDIN_FILENO, F_SETFL, oldf | O_NONBLOCK);
 
-    start_t = (double)(clock() / CLOCKS_PER_SEC);
+    start_t = ((double)clock() / CLOCKS_PER_SEC)*1000;
     while(1) {
         
         ch = getchar();
         if(ch != EOF){
             if(ch == 'a') {
-                ship.position.x-=3;
+                ship.position.x-=5;
                 print_ship();
             }
             if(ch == 'd') {
-                ship.position.x+=3;
+                ship.position.x+=5;
                 print_ship();
             }
             if(ch == 'x')
                 break;
-            if(ch == 'p'){
-                ship.shots[0].visible = 1;
-                ship.shots[0].position.x = ship.position.x;
-                ship.shots[0].position.y = ship.position.y - 2;
-            }
-        }
-        end_t = (double)(clock() / CLOCKS_PER_SEC);
-        if(end_t - start_t > 1) {
-            start_t = (double)(clock() / CLOCKS_PER_SEC);
-            for (int i = 0; i < 3; i++) {
-                if(ship.shots[i].visible){
-                    if(ship.shots[i].position.y >= y_border_init){
-                        ship.shots[i].visible = 0;
-                        continue;
+            if(ch == ' '){
+                for (int i = 0; i < 3; i++) {
+                    if(!ship.shots[i].visible){
+                        ship.shots[i].visible = 1;
+                        ship.shots[i].position.x = ship.position.x;
+                        ship.shots[i].position.y = ship.position.y - 2;
+                        break;
                     }
-                    ship.shots[i].position.y++;
-                    print_coord(ship.shots[i].position.x, ship.shots[i].position.y, '|');
                 }
+                
+                
             }
         }
-        
+        end_t = ((double)clock() / CLOCKS_PER_SEC)*1000;
+        if(end_t - start_t >= 0.1) {
+            start_t = ((double)clock() / CLOCKS_PER_SEC)*1000;
+            print_shot();
+            
+        }
+        usleep(10000);
 
     }
+    
 
     
     printf("\e[?25h"); //ativar cursor
@@ -242,7 +260,7 @@ int main() {
 
     tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
     fcntl(STDIN_FILENO, F_SETFL, oldf);
-    putchar('\n');
+    system("clear");
     
 
 }
