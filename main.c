@@ -48,7 +48,7 @@ int x_border_init;
 int x_border_fin;
 int y_border_init;
 int y_border_fin;
-int x_size = 100;
+int x_size = 102;
 int y_size = 45;
 coord ws;
 
@@ -178,7 +178,6 @@ void alien_constructor(alien_struct *aliens) {
      
 
 
-
 int main() {
     double start_t, end_t;
     alien_struct aliens[5][10];
@@ -192,13 +191,11 @@ int main() {
 
     print_tab();
 
-    ship.position.x = x_border_fin - x_border_init;
+    ship.position.x = (x_border_fin - x_border_init) / 2 + x_border_init;
     ship.position.y = y_border_fin - 3;
 
     print_ship();
 
-
-    //ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
     printf("\e[?25l"); //desativar cursor
     struct termios oldt, newt;
     int ch;
@@ -216,12 +213,16 @@ int main() {
         ch = getchar();
         if(ch != EOF){
             if(ch == 'a') {
-                ship.position.x-=5;
-                print_ship();
+                if(ship.position.x - 5 > x_border_init){
+                    ship.position.x-=5;
+                    print_ship();
+                }
             }
             if(ch == 'd') {
-                ship.position.x+=5;
-                print_ship();
+                if(ship.position.x + 5 < x_border_fin){
+                    ship.position.x+=5;
+                    print_ship();
+                }
             }
             if(ch == 'x')
                 break;
@@ -248,15 +249,7 @@ int main() {
 
     }
     
-
-    
     printf("\e[?25h"); //ativar cursor
-
-
-
-
-
-
 
     tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
     fcntl(STDIN_FILENO, F_SETFL, oldf);
