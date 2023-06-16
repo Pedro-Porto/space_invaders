@@ -50,6 +50,8 @@ int y_border_init;
 int y_border_fin;
 int x_size = 102;
 int y_size = 45;
+int aliens_x = 10;
+int aliens_y = 5;
 coord ws;
 
 
@@ -79,22 +81,13 @@ typedef struct alien_struct {
 } alien_struct;
 
 
-// \ | /
-//      
-// / | \
 
-//  \ / 
-// |O O|
-// /( )\
 
-//  / \ 
-// (O O)
-// /^ ^\
-
-char alien_img[3][10] = {
+char alien_img[4][20] = {
     " \\ / |O O|/( )\\",
     " / \\ (O O)/^ ^\\",
-    "\\ | /     / | \\"
+    "\\ | /     / | \\",
+    "                 "
 };
 
 
@@ -144,24 +137,7 @@ void print_ship() {
     ship.old_position.y = ship.position.y;
 }
 
-void print_shot() {
-    for (int i = 0; i < 3; i++) {
-        if(ship.shots[i].visible){
-            if(ship.shots[i].position.y <= y_border_init){
-                ship.shots[i].visible = 0;
-                print_coord(ship.shots[i].position.x, ship.shots[i].position.y, ' ');
-                continue;
-            }
-            ship.shots[i].position.y--;
-            print_coord(ship.shots[i].old_position.x, ship.shots[i].old_position.y, ' ');
-            printf("\033[0;34m"); //azul
-            print_coord(ship.shots[i].position.x, ship.shots[i].position.y, '|');
-            ship.shots[i].old_position.x = ship.shots[i].position.x;
-            ship.shots[i].old_position.y = ship.shots[i].position.y;
-        }
-    }
-    
-}
+
 
 
 
@@ -189,15 +165,59 @@ void print_tab() {
 }
 
 
+void print_alien(alien_struct alien) {
+    for (int i = 0; i < 15; i++)
+        print_coord(alien.position.x + (i - ((i / 5) * 5) - 2), alien.position.y + (i / 5) + 1, alien_img[alien.type][i]);
+}
+
+void print_shot() {
+    for (int i = 0; i < 3; i++) {
+        if(ship.shots[i].visible){
+            if(ship.shots[i].position.y <= y_border_init){
+                ship.shots[i].visible = 0;
+                print_coord(ship.shots[i].position.x, ship.shots[i].position.y, ' ');
+                continue;
+            }
+            ship.shots[i].position.y--;
+            print_coord(ship.shots[i].old_position.x, ship.shots[i].old_position.y, ' ');
+            printf("\033[0;34m"); //azul
+            print_coord(ship.shots[i].position.x, ship.shots[i].position.y, '|');
+            ship.shots[i].old_position.x = ship.shots[i].position.x;
+            ship.shots[i].old_position.y = ship.shots[i].position.y;
+        }
+    }
+    
+}
+
+
+
 
 void alien_constructor(alien_struct *aliens) {
-    for (int i = 0; i < 50; i++) {
-        aliens->type = 0;
-        aliens->position.x = 0;
-        aliens->position.y = 0;
-        aliens->visible = 1;
-        aliens++;
+    int mid_l;
+    int mid_r;
+    if(!(aliens_x % 2)){
+        mid_l = ((x_border_fin - x_border_init) / 2 + x_border_init) - 4;
+        mid_r = ((x_border_fin - x_border_init) / 2 + x_border_init) + 4;
     }
+    else {
+        mid_l = (x_border_fin - x_border_init) / 2 + x_border_init;
+        mid_r = (x_border_fin - x_border_init) / 2 + x_border_init;
+    }
+
+    for (int y = 0; y < aliens_y; y++)
+        for (int x = 0; x < aliens_x; x++) {
+            if(x < aliens_x / 2) 
+                aliens->position.x = mid_l - (((aliens_x / 2) - x - 1) * 8);
+            else 
+                aliens->position.x = mid_r + (x - (aliens_x / 2)) * 8;
+
+            aliens->type = (y % 2);
+            aliens->position.y = y_border_init + 2 + (y * 5);
+            aliens->visible = 1;
+            print_alien(*aliens);
+            aliens++;
+
+        }
 }
 
 
@@ -219,13 +239,8 @@ int main() {
 
     print_ship();
 
-    alien_struct aliens[5][10];
-    alien_constructor(&aliens);
-
-    for (int i = 0; i < 5; i++)
-        for (int j = 0; j < 10; j++) {
-            print_coord((x_border_fin - x_border_init) / 2, 1, ' ');
-        }
+    alien_struct aliens[aliens_y*aliens_x];
+    alien_constructor(aliens);
 
 
 
@@ -280,6 +295,16 @@ int main() {
         if(end_t - start_t >= 0.1) {
             start_t = ((double)clock() / CLOCKS_PER_SEC)*1000;
             print_shot();
+            for (int i = 0; i < aliens_y*aliens_x; i++) {
+                for (int j = 0; j < 3; j++) {
+                    if(aliens[i].visible && ship.shots[j].visible && ship.shots[j].position.x >= aliens[i].position.x - 2 && ship.shots[j].position.x <= aliens[i].position.x + 2 && ship.shots[j].position.y >= aliens[i].position.y - 1 && ship.shots[j].position.y <= aliens[i].position.y + 1){
+                        ship.shots[j].visible = 0;
+                        aliens[i].visible = 0;
+                        aliens[i].type = 3;
+                        print_alien(aliens[i]);
+                    }
+            }
+            }
             
         }
         usleep(10000);
