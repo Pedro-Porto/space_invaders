@@ -6,6 +6,7 @@
 #include<termios.h>
 #include<fcntl.h>
 #include<wchar.h>
+#include <sys/time.h>
 
 
 
@@ -15,13 +16,40 @@ typedef struct coord {
 } coord;
 
 
-coord window_size(){
+coord window_size() {
     struct winsize w;
     ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
     coord ws = {w.ws_col, w.ws_row};
     return ws;
 }
 
+
+unsigned long mix(unsigned long a, unsigned long b, unsigned long c) {
+    a=a-b;  a=a-c;  a=a^(c >> 13);
+    b=b-c;  b=b-a;  b=b^(a << 8);
+    c=c-a;  c=c-b;  c=c^(b >> 13);
+    a=a-b;  a=a-c;  a=a^(c >> 12);
+    b=b-c;  b=b-a;  b=b^(a << 16);
+    c=c-a;  c=c-b;  c=c^(b >> 5);
+    a=a-b;  a=a-c;  a=a^(c >> 3);
+    b=b-c;  b=b-a;  b=b^(a << 10);
+    c=c-a;  c=c-b;  c=c^(b >> 15);
+    return c;
+}
+
+int rand_range(int minimum_number, int max_number){
+    unsigned long seed = mix(clock(), time(NULL), getpid());
+    srand(seed);
+    return rand() % (max_number + 1 - minimum_number) + minimum_number;
+}
+
+
+double get_time() {
+    struct timeval  tv;
+    gettimeofday(&tv, NULL);
+    double t = (tv.tv_sec) * 1000 + (tv.tv_usec) / 1000 ;
+    return t/1000;
+}
 
 int check_char() {
     struct termios oldt, newt;
@@ -66,6 +94,13 @@ typedef struct shot_struct {
 } shot_struct;
 
 
+typedef struct star_struct {
+    int visible;
+    coord position;
+    coord old_position;
+    int side;
+} star_struct;
+
 
 typedef struct ship_struct {
     char sps[10];
@@ -83,6 +118,20 @@ typedef struct alien_struct {
 } alien_struct;
 
 
+typedef struct menu_struct {
+    char text[50];
+    int text_size;
+    int selected;
+} menu_struct;
+
+
+typedef struct limits_struct {
+    int start_x;
+    int end_x;
+    int start_y;
+    int end_y;
+    int active;
+} limits_struct;
 
 
 char alien_img[4][20] = {
@@ -144,7 +193,7 @@ void print_ship() {
 
 void print_tab() {
     system("clear");
-    printf("\033[0;31m"); //amarelo
+    printf("\033[0;31m"); //vermelho
     for (int y = 0; y < ws.y; y++)
         for (int x = 0; x < ws.x; x++) {
             if ((x == x_border_init && y >= y_border_init && y <= y_border_fin) || (x == x_border_fin && y >= y_border_init && y <= y_border_fin))
@@ -196,7 +245,7 @@ void print_shot() {
 
 
 void alien_constructor(alien_struct *aliens) {
-    int mid = (x_border_fin - x_border_init) / 2 + x_border_init;
+    int mid = (x_border_fin + x_border_init) / 2;
     for (int y = 0; y < aliens_y; y++)
         for (int x = 0; x < aliens_x; x++) {
             aliens->position.x = (mid - 40) + (x * 8);
@@ -212,17 +261,6 @@ void alien_constructor(alien_struct *aliens) {
 }
 
 
-
-void sleep_ms(int ms) {
-    double start_t, start_t2, end_t;
-    start_t = ((double)clock() / CLOCKS_PER_SEC);
-    while(end_t - start_t < (double)(ms / 1000)){
-        end_t = ((double)clock() / CLOCKS_PER_SEC);
-    }
-}
-
-
-
 void main_game() {
     double start_t, start_t2, end_t;
     int ch;
@@ -235,7 +273,7 @@ void main_game() {
 
     print_tab();
 
-    usleep(10000);
+    usleep(1000);
 
     ship.position.x = (x_border_fin - x_border_init) / 2 + x_border_init;
     ship.position.y = y_border_fin - 3;
@@ -246,8 +284,8 @@ void main_game() {
     alien_constructor(aliens);
 
     fflush(stdout);
-    start_t = ((double)clock() / CLOCKS_PER_SEC);
-    start_t2 = ((double)clock() / CLOCKS_PER_SEC);
+    start_t = get_time();
+    start_t2 = get_time();
     while(1) {
         ch = getchar();
         if(ch != EOF){
@@ -290,9 +328,9 @@ void main_game() {
                 
             }
         }
-        end_t = ((double)clock() / CLOCKS_PER_SEC);
+        end_t = get_time();
         if(end_t - start_t >= 0.03) {
-            start_t = ((double)clock() / CLOCKS_PER_SEC);
+            start_t = get_time();
             print_shot();
             for (int i = 0; i < aliens_y*aliens_x; i++) {
                 if(aliens[i].type == 2) {
@@ -308,7 +346,7 @@ void main_game() {
 
                 for (int j = 0; j < 3; j++) {
                     if(aliens[i].type != 2 && aliens[i].type != 3 && ship.shots[j].visible && ship.shots[j].position.x >= aliens[i].position.x - 2 && ship.shots[j].position.x <= aliens[i].position.x + 2 && ship.shots[j].position.y >= aliens[i].position.y - 1 && ship.shots[j].position.y <= aliens[i].position.y + 1){
-                        ship.shots[j].visible = 0;
+                        ship.shots[j].visible = 0; //imprimir o tiro de novo
                         aliens[i].type = 2;
                         print_alien(&aliens[i]);
                     }
@@ -317,7 +355,7 @@ void main_game() {
             }
         }
         if(end_t - start_t2 >= 1){
-            start_t2 = ((double)clock() / CLOCKS_PER_SEC);
+            start_t2 = get_time();
             int al_max_coord = alien_direction*1000;
             for (int i = 0; i < aliens_y*aliens_x; i++) {
                 if(!alien_direction && aliens[i].position.x > al_max_coord && aliens[i].visible)
@@ -329,7 +367,7 @@ void main_game() {
             if((!alien_direction && al_max_coord + 5 >= x_border_fin) || (alien_direction && al_max_coord - 5 <= x_border_init)){
                 alien_direction = !alien_direction;
                 for (int i = aliens_y*aliens_x - 1; i >= 0; i--) {
-                    aliens[i].position.y += 3;
+                    aliens[i].position.y += 2;
                     print_alien(&aliens[i]);
                 }
             }
@@ -350,10 +388,195 @@ void main_game() {
                 }
             }
         }
-        sleep_ms(1);
     }
 }
 
+
+void print_star(star_struct *star, limits_struct *limits) {
+    int print_new = 1;
+    int print_old = 1;
+    for (int i = 0; i < 3; i++) {
+        if(limits->active){
+            if(star->position.x > limits->start_x - 1 && star->position.x < limits->end_x + 1 && star->position.y > limits->start_y - 1 && star->position.y < limits->end_y + 1)
+                print_new = 0;
+            if(star->old_position.x > limits->start_x - 1 && star->old_position.x < limits->end_x + 1 && star->old_position.y > limits->start_y - 1 && star->old_position.y < limits->end_y + 1)
+                print_old = 0;
+        }
+        limits++;
+    }
+    if(print_old)
+        print_coord(star->old_position.x, star->old_position.y, ' ');
+    if(print_new) {
+        printf("\033[0;37m"); //branco
+        print_coord(star->position.x, star->position.y, star->side == 1 ? '\\' : '/');
+    }
+    star->old_position = star->position;
+
+    
+    // if(star->position.x > start_x - 1 && star->position.x < end_x + 1 && star->position.y > start_y - 1 && star->position.y < end_y + 1){
+    //     if(!(star->old_position.x > start_x - 1 && star->old_position.x < end_x + 1 && star->old_position.y > start_y - 1 && star->old_position.y < end_y + 1))
+    //         print_coord(star->old_position.x, star->old_position.y, ' ');
+    // }
+    // else {
+    //     if(!(star->old_position.x > start_x - 1 && star->old_position.x < end_x + 1 && star->old_position.y > start_y - 1 && star->old_position.y < end_y + 1))
+    //         print_coord(star->old_position.x, star->old_position.y, ' ');
+        
+    //     star->old_position = star->position;
+    // }
+}
+
+
+
+void menu(){
+    int ch;
+    int stars_count = 150;
+    star_struct stars[stars_count];
+    limits_struct limits[3] = {
+        {
+            .active = 0
+        },
+        {
+            .active = 0
+        },
+        {
+            .active = 0
+        }
+    };
+    
+    menu_struct menu_itens[4] = {
+        {
+            .text = "Start",
+            .text_size = 5,
+            .selected = 1
+        },
+        {
+            .text = "Highscore leaderboard",
+            .text_size = 21,
+            .selected = 0
+        },
+        {
+            .text = "Settings",
+            .text_size = 8,
+            .selected = 0
+        },
+        {
+            .text = "Quit",
+            .text_size = 4,
+            .selected = 0
+        }
+    };
+    for (int i = 0; i < stars_count; i++){
+        stars[i].visible = 0;
+    }
+    
+    ws = window_size();
+    x_border_init = (ws.x - x_size) / 2;
+    x_border_fin = x_border_init + x_size;
+    y_border_init = (ws.y - y_size) / 2;
+    y_border_fin = y_border_init + y_size;
+    print_tab();
+
+
+    char title[450] = "       ____                                    / ___| _ __   __ _  ___ ___              \\___ \\| '_ \\ / _` |/ __/ _ \\              ___) | |_) | (_| | (_|  __/             |____/| .__/ \\__,_|\\___\\___|        ___        |_|          _               |_ _|_ ____   ____ _  __| | ___ _ __ ___  | || '_ \\ \\ / / _` |/ _` |/ _ \\ '__/ __| | || | | \\ V / (_| | (_| |  __/ |  \\__ \\|___|_| |_|\\_/ \\__,_|\\__,_|\\___|_|  |___/";
+    // 10 x 41
+    double start_t, end_t;
+    limits[0].start_x = (x_border_fin + x_border_init) / 2 - 20;
+    limits[0].start_y = y_border_init + 5;
+    limits[0].end_x = limits[0].start_x + 41;
+    limits[0].end_y = limits[0].start_y + 10;
+    limits[0].active = 1;
+    printf("\033[0;36m"); //ciano
+    
+    for (int i = 0; i < 10; i++) {
+        for (int j = 0; j < 41; j++) {
+            print_coord(limits[0].start_x + j, limits[0].start_y + i, title[i*41 + j]);
+        }
+    }
+    printf("\033[0;31m"); //vermelho
+    limits[1].start_x = (x_border_fin + x_border_init) / 2 - 15;
+    limits[1].end_x = limits[1].start_x + 30;
+    limits[1].end_y = y_border_fin - 4;
+    limits[1].start_y = limits[1].end_y - 15;
+    limits[1].active = 1;
+    for (int y = y_border_init; y < y_border_fin; y++)
+        for (int x = x_border_init; x < x_border_fin; x++) {
+            if ((x == limits[1].start_x && y >= limits[1].start_y + 1 && y <= limits[1].end_y) || (x == limits[1].end_x && y >= limits[1].start_y + 1 && y <= limits[1].end_y))
+                print_coord(x, y, '|');
+            else if ((y == limits[1].start_y && x >= limits[1].start_x + 1 && x <= limits[1].end_x - 1) || (y == limits[1].end_y && x >= limits[1].start_x && x <= limits[1].end_x))
+                print_coord(x, y, '_');
+        }
+    printf("\033[0;37m"); //branco
+    for (int i = 0; i < 4; i++){
+        int c_x = (x_border_fin + x_border_init) / 2 - (menu_itens[i].text_size / 2);
+        int c_y = limits[1].start_y + (i * 3 + 3);
+        for (int j = 0; j < menu_itens[i].text_size; j++) {
+            print_coord(c_x + j, c_y, menu_itens[i].text[j]);
+        }
+        
+    }
+    
+
+
+
+
+    fflush(stdout);
+    start_t = get_time();
+    while(1){
+        ch = getchar();
+        if(ch != EOF){
+            if(ch == 'x') {
+                break;
+            }
+        }
+        end_t = get_time();
+        if(end_t - start_t > 0.1){
+            start_t = get_time();
+            for (int j = 0; j < 2; j++){
+                for (int i = 0; i < stars_count; i++) {
+                    if(!stars[i].visible){
+                        int rn = rand_range(0, 3);
+                        if(rn == 0 || rn == 1) {
+                            stars[i].position.x = rand_range(x_border_init + 1, x_border_fin - 1);
+                            stars[i].position.y = y_border_init + 1;
+                        }
+                        else if(rn == 2) {
+                            stars[i].position.x = (x_border_fin + x_border_init) / 2 - 1;
+                            stars[i].position.y = rand_range(y_border_init + 1, y_border_fin - 1);
+                        }
+                        else {
+                            stars[i].position.x = (x_border_fin + x_border_init) / 2 + 1;
+                            stars[i].position.y = rand_range(y_border_init + 1, y_border_fin - 1);
+                        }
+
+                        if(stars[i].position.x < limits[0].start_x + 20)
+                            stars[i].side = -1;
+                        else
+                            stars[i].side = 1;
+                        stars[i].old_position.x = stars[i].position.x;
+                        stars[i].old_position.y = stars[i].position.y;
+                        stars[i].visible = 1;
+                        print_star(&stars[i], limits);
+                        break;
+                    }
+                }
+            }
+
+            for (int i = 0; i < stars_count; i++) {
+                if(stars[i].visible){
+                    if(stars[i].position.y + 1 >= y_border_fin || stars[i].position.x - 1 <= x_border_init || stars[i].position.x + 1 >= x_border_fin){
+                        stars[i].visible = 0;
+                        print_coord(stars[i].position.x, stars[i].position.y, ' ');
+                        continue;
+                    }
+                    stars[i].position.x += stars[i].side;
+                    stars[i].position.y++;
+                    print_star(&stars[i], limits);
+                }
+            }
+        }
+        usleep(1000);
+    }
+}
 
 int main() {
     system("clear");
@@ -368,7 +591,8 @@ int main() {
     oldf = fcntl(STDIN_FILENO, F_GETFL, 0);
     fcntl(STDIN_FILENO, F_SETFL, oldf | O_NONBLOCK);
 
-    main_game();
+    menu();
+
 
     printf("\e[?25h"); //ativar cursor
 
