@@ -9,8 +9,7 @@
 #include <sys/time.h>
 
 
-
-typedef struct coord {
+typedef struct {
     int x;
     int y;
 } coord;
@@ -86,7 +85,7 @@ coord ws;
 
 
 
-typedef struct shot_struct {
+typedef struct {
     int visible;
     coord position;
     coord old_position;
@@ -94,7 +93,7 @@ typedef struct shot_struct {
 } shot_struct;
 
 
-typedef struct star_struct {
+typedef struct {
     int visible;
     coord position;
     coord old_position;
@@ -102,14 +101,14 @@ typedef struct star_struct {
 } star_struct;
 
 
-typedef struct ship_struct {
+typedef struct {
     char sps[10];
     coord position;
     coord old_position;
     shot_struct shots[3];
 } ship_struct;
 
-typedef struct alien_struct {
+typedef struct {
     coord position;
     coord old_position;
     int type;
@@ -118,14 +117,15 @@ typedef struct alien_struct {
 } alien_struct;
 
 
-typedef struct menu_struct {
+typedef struct {
     char text[50];
     int text_size;
     int selected;
+    int state;
 } menu_struct;
 
 
-typedef struct limits_struct {
+typedef struct {
     int start_x;
     int end_x;
     int start_y;
@@ -411,25 +411,61 @@ void print_star(star_struct *star, limits_struct *limits) {
         print_coord(star->position.x, star->position.y, star->side == 1 ? '\\' : '/');
     }
     star->old_position = star->position;
-
-    
-    // if(star->position.x > start_x - 1 && star->position.x < end_x + 1 && star->position.y > start_y - 1 && star->position.y < end_y + 1){
-    //     if(!(star->old_position.x > start_x - 1 && star->old_position.x < end_x + 1 && star->old_position.y > start_y - 1 && star->old_position.y < end_y + 1))
-    //         print_coord(star->old_position.x, star->old_position.y, ' ');
-    // }
-    // else {
-    //     if(!(star->old_position.x > start_x - 1 && star->old_position.x < end_x + 1 && star->old_position.y > start_y - 1 && star->old_position.y < end_y + 1))
-    //         print_coord(star->old_position.x, star->old_position.y, ' ');
-        
-    //     star->old_position = star->position;
-    // }
 }
 
+void change_menu_selection(menu_struct *menu_itens, limits_struct limits, int selection){
+    for (int i = 0; i < 4; i++) {
+        int c_x = (x_border_fin + x_border_init) / 2 - (menu_itens->text_size / 2);
+        int c_y = limits.start_y + (i * 3 + 3);
+        if(i != selection && menu_itens->selected){
+            menu_itens->selected = 0;
+            menu_itens->state = 1;
+            printf("\033[0m"); //reset
+            printf("\033[0;37m"); //branco
+            for (int j = 0; j < menu_itens->text_size; j++) {
+                print_coord(c_x + j, c_y, menu_itens->text[j]);
+            }
+            print_coord(c_x - 1, c_y, ' ');
+            print_coord(c_x + menu_itens->text_size, c_y, ' ');
+        }
+        if(!menu_itens->selected && i == selection) {
+            menu_itens->selected = 1;
+            
+            printf("\033[0;37m\033[41m"); //branco / fundo vermelho
+            for (int j = 0; j < menu_itens->text_size; j++) {
+                print_coord(c_x + j, c_y, menu_itens->text[j]);
+            }
+            printf("\033[0m"); //reset
+            printf("\033[0;37m"); //branco
+            print_coord(c_x - 1, c_y, '<');
+            print_coord(c_x + menu_itens->text_size, c_y, '>');
+        }
+        menu_itens++;
+    }
+}
 
+void switch_selection_state(menu_struct *menu_itens, limits_struct limits, int selection) {
+    if(menu_itens[selection].state){
+        printf("\033[0m"); //reset
+        printf("\033[0;37m"); //branco
+    }
+    else {
+        printf("\033[0;37m\033[41m"); //branco / fundo vermelho
+    }
+    menu_itens[selection].state = !menu_itens[selection].state;
+    int c_x = (x_border_fin + x_border_init) / 2 - (menu_itens[selection].text_size / 2);
+    int c_y = limits.start_y + (selection * 3 + 3);
+    for (int i = 0; i < menu_itens[selection].text_size; i++) {
+        print_coord(c_x + i, c_y, menu_itens[selection].text[i]);
+    }
+    printf("\033[0m"); //reset
+}
 
-void menu(){
+int menu(){
     int ch;
     int stars_count = 150;
+    int menu_selection = 0;
+    int menu_state = 0;
     star_struct stars[stars_count];
     limits_struct limits[3] = {
         {
@@ -447,22 +483,26 @@ void menu(){
         {
             .text = "Start",
             .text_size = 5,
-            .selected = 1
+            .selected = 0,
+            .state = 1
         },
         {
             .text = "Highscore leaderboard",
             .text_size = 21,
-            .selected = 0
+            .selected = 0,
+            .state = 1
         },
         {
             .text = "Settings",
             .text_size = 8,
-            .selected = 0
+            .selected = 0,
+            .state = 1
         },
         {
             .text = "Quit",
             .text_size = 4,
-            .selected = 0
+            .selected = 0,
+            .state = 1
         }
     };
     for (int i = 0; i < stars_count; i++){
@@ -476,10 +516,9 @@ void menu(){
     y_border_fin = y_border_init + y_size;
     print_tab();
 
-
     char title[450] = "       ____                                    / ___| _ __   __ _  ___ ___              \\___ \\| '_ \\ / _` |/ __/ _ \\              ___) | |_) | (_| | (_|  __/             |____/| .__/ \\__,_|\\___\\___|        ___        |_|          _               |_ _|_ ____   ____ _  __| | ___ _ __ ___  | || '_ \\ \\ / / _` |/ _` |/ _ \\ '__/ __| | || | | \\ V / (_| | (_| |  __/ |  \\__ \\|___|_| |_|\\_/ \\__,_|\\__,_|\\___|_|  |___/";
     // 10 x 41
-    double start_t, end_t;
+    double start_t, start_t2, end_t;
     limits[0].start_x = (x_border_fin + x_border_init) / 2 - 20;
     limits[0].start_y = y_border_init + 5;
     limits[0].end_x = limits[0].start_x + 41;
@@ -514,21 +553,63 @@ void menu(){
         }
         
     }
+    limits[2].start_x = (x_border_fin + x_border_init) / 2 - 40;
+    limits[2].start_y = (y_border_fin + y_border_init) / 2 - 20;
+    limits[2].end_x = limits[2].start_x + 80;
+    limits[2].end_y = limits[2].start_y + 40;
+    
     
 
-
-
-
+    change_menu_selection(menu_itens, limits[1], menu_selection);
     fflush(stdout);
     start_t = get_time();
+    start_t2 = start_t;
     while(1){
         ch = getchar();
         if(ch != EOF){
-            if(ch == 'x') {
-                break;
+            if(!menu_state && ch == '\n' && menu_selection == 3) {
+                return 0;
+            }
+            if(!menu_state && ch == '\n' && menu_selection == 0) {
+                return 1;
+            }
+            if(!menu_state && ch == '\n' && menu_selection == 1) {
+                menu_state = 1;
+            }
+            if(!menu_state && ch == 'w' && menu_selection != 0) {
+                menu_selection--;
+                change_menu_selection(menu_itens, limits[1], menu_selection);
+                start_t2 = get_time() + 0.5;
+            }
+            if(!menu_state && ch == 's' && menu_selection != 3) {
+                menu_selection++;
+                change_menu_selection(menu_itens, limits[1], menu_selection);
+                start_t2 = get_time() + 0.5;
             }
         }
+
         end_t = get_time();
+        if(!menu_state && end_t - start_t2 > 0.3) {
+            start_t2 = get_time();
+            switch_selection_state(menu_itens, limits[1], menu_selection);
+        }
+        if(menu_state == 1) {
+            for (int y = y_border_init + 1; y < y_border_fin - 1; y++)
+                for (int x = x_border_init + 1; x < x_border_fin - 1; x++) {
+                    if ((x == limits[2].start_x && y >= limits[2].start_y + 1 && y <= limits[2].end_y) || (x == limits[2].end_x && y >= limits[2].start_y + 1 && y <= limits[2].end_y))
+                        print_coord(x, y, '|');
+                    else if ((y == limits[2].start_y && x >= limits[2].start_x + 1 && x <= limits[2].end_x - 1) || (y == limits[2].end_y && x >= limits[2].start_x && x <= limits[2].end_x))
+                        print_coord(x, y, '_');
+                    else
+                        print_coord(x, y, ' ');
+                }
+            limits[0].active = 0;
+            limits[1].active = 0;
+            limits[2].active = 1;
+            menu_state++;
+        }
+
+
         if(end_t - start_t > 0.1){
             start_t = get_time();
             for (int j = 0; j < 2; j++){
@@ -591,10 +672,13 @@ int main() {
     oldf = fcntl(STDIN_FILENO, F_GETFL, 0);
     fcntl(STDIN_FILENO, F_SETFL, oldf | O_NONBLOCK);
 
-    menu();
+    int m = menu();
+    if(m == 1)
+        main_game();
 
 
     printf("\e[?25h"); //ativar cursor
+    printf("\033[0m"); //reset
 
     tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
     fcntl(STDIN_FILENO, F_SETFL, oldf);
