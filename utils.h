@@ -36,4 +36,6 @@ void reset_terminal();
 
 void clear_screen();
 
+void msleep(int millis);
+
 #endif

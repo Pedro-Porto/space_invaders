@@ -134,3 +134,7 @@ void reset_terminal() {
 void clear_screen() {
     system("clear");
 }
+
+void msleep(int millis) {
+    usleep(millis * 1000);
+}
