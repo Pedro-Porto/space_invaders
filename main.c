@@ -6,84 +6,12 @@
 #include<termios.h>
 #include<fcntl.h>
 #include<wchar.h>
-#include <sys/time.h>
+#include<sys/time.h>
+#include "utils.h"
 
 
-typedef struct {
-    int x;
-    int y;
-} coord;
-
-
-coord window_size() {
-    struct winsize w;
-    ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
-    coord ws = {w.ws_col, w.ws_row};
-    return ws;
-}
-
-
-unsigned long mix(unsigned long a, unsigned long b, unsigned long c) {
-    a=a-b;  a=a-c;  a=a^(c >> 13);
-    b=b-c;  b=b-a;  b=b^(a << 8);
-    c=c-a;  c=c-b;  c=c^(b >> 13);
-    a=a-b;  a=a-c;  a=a^(c >> 12);
-    b=b-c;  b=b-a;  b=b^(a << 16);
-    c=c-a;  c=c-b;  c=c^(b >> 5);
-    a=a-b;  a=a-c;  a=a^(c >> 3);
-    b=b-c;  b=b-a;  b=b^(a << 10);
-    c=c-a;  c=c-b;  c=c^(b >> 15);
-    return c;
-}
-
-int rand_range(int minimum_number, int max_number){
-    unsigned long seed = mix(clock(), time(NULL), getpid());
-    srand(seed);
-    return rand() % (max_number + 1 - minimum_number) + minimum_number;
-}
-
-
-double get_time() {
-    struct timeval  tv;
-    gettimeofday(&tv, NULL);
-    double t = (tv.tv_sec) * 1000 + (tv.tv_usec) / 1000 ;
-    return t/1000;
-}
-
-int check_char() {
-    struct termios oldt, newt;
-    int ch;
-    int oldf;
-    tcgetattr(STDIN_FILENO, &oldt);
-    newt = oldt;
-    newt.c_lflag &= ~(ICANON | ECHO);
-    tcsetattr(STDIN_FILENO, TCSANOW, &newt);
-    oldf = fcntl(STDIN_FILENO, F_GETFL, 0);
-    fcntl(STDIN_FILENO, F_SETFL, oldf | O_NONBLOCK);
-    ch = getchar();
-    tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
-    fcntl(STDIN_FILENO, F_SETFL, oldf);
-    if(ch != EOF){
-      ungetc(ch, stdin);
-      return 1;
-    }
-    return 0;
-}
-
-
-int x_border_init;
-int x_border_fin;
-int y_border_init;
-int y_border_fin;
-int x_size = 150;
-int y_size = 45;
 int aliens_x = 11;
 int aliens_y = 5;
-coord ws;
-
-
-
-
 
 typedef struct {
     int visible;
@@ -169,14 +97,12 @@ ship_struct ship = {
 
 
 
-void print_coord(int x, int y, char c) {
-    printf("\033[%d;%dH%c", y + 1, x + 1, c);
-}
+
 
 
 
 void print_ship() {
-    printf("\033[0;37m"); //branco
+    change_color(37, 0); //branco
     for (int i = 0; i < 10; i++){
         if(ship.old_position.x != ship.position.x || ship.old_position.y != ship.position.y)
             print_coord(ship.old_position.x + (i - ((i / 5) * 5) - 2), ship.old_position.y - !(i / 5), ' ');
@@ -191,28 +117,15 @@ void print_ship() {
 
 
 
-void print_tab() {
-    system("clear");
-    printf("\033[0;31m"); //vermelho
-    for (int y = 0; y < ws.y; y++)
-        for (int x = 0; x < ws.x; x++) {
-            if ((x == x_border_init && y >= y_border_init && y <= y_border_fin) || (x == x_border_fin && y >= y_border_init && y <= y_border_fin))
-                putchar('#');
-            else if ((y == y_border_init && x >= x_border_init && x <= x_border_fin) || (y == y_border_fin && x >= x_border_init && x <= x_border_fin))
-                putchar('#');
-            else
-                putchar(' ');
-        }
-    fflush(stdout);
-}
+
 
 
 void print_alien(alien_struct *alien) {
     if(alien->visible){
         if(alien->type == 2)
-            printf("\033[0;33m"); //amarelo
+            change_color(33, 0); //amarelo
         else
-            printf("\033[0;32m"); //verde
+            change_color(32, 0); //verde
         if(alien->position.x != alien->old_position.x || alien->position.y != alien->old_position.y)
             for (int i = 0; i < 15; i++)
                 print_coord(alien->old_position.x + (i - ((i / 5) * 5) - 2), alien->old_position.y + (i / 5) + 1, ' ');
@@ -233,7 +146,7 @@ void print_shot() {
             }
             ship.shots[i].position.y--;
             print_coord(ship.shots[i].old_position.x, ship.shots[i].old_position.y, ' ');
-            printf("\033[0;34m"); //azul
+            change_color(34, 0); //azul
             print_coord(ship.shots[i].position.x, ship.shots[i].position.y, '|');
             ship.shots[i].old_position.x = ship.shots[i].position.x;
             ship.shots[i].old_position.y = ship.shots[i].position.y;
@@ -265,11 +178,7 @@ void main_game() {
     double start_t, start_t2, end_t;
     int ch;
     int alien_direction = 0; // 0 = direita; 1 = esquerda
-    ws = window_size();
-    x_border_init = (ws.x - x_size) / 2;
-    x_border_fin = x_border_init + x_size;
-    y_border_init = (ws.y - y_size) / 2;
-    y_border_fin = y_border_init + y_size;
+    
 
     print_tab();
 
@@ -407,7 +316,7 @@ void print_star(star_struct *star, limits_struct *limits) {
     if(print_old)
         print_coord(star->old_position.x, star->old_position.y, ' ');
     if(print_new) {
-        printf("\033[0;37m"); //branco
+        change_color(37, 0); //branco
         print_coord(star->position.x, star->position.y, star->side == 1 ? '\\' : '/');
     }
     star->old_position = star->position;
@@ -420,8 +329,7 @@ void change_menu_selection(menu_struct *menu_itens, limits_struct limits, int se
         if(i != selection && menu_itens->selected){
             menu_itens->selected = 0;
             menu_itens->state = 1;
-            printf("\033[0m"); //reset
-            printf("\033[0;37m"); //branco
+            change_color(37, 0); //branco
             for (int j = 0; j < menu_itens->text_size; j++) {
                 print_coord(c_x + j, c_y, menu_itens->text[j]);
             }
@@ -431,12 +339,11 @@ void change_menu_selection(menu_struct *menu_itens, limits_struct limits, int se
         if(!menu_itens->selected && i == selection) {
             menu_itens->selected = 1;
             
-            printf("\033[0;37m\033[41m"); //branco / fundo vermelho
+            change_color(37, 41); //branco / fundo vermelho
             for (int j = 0; j < menu_itens->text_size; j++) {
                 print_coord(c_x + j, c_y, menu_itens->text[j]);
             }
-            printf("\033[0m"); //reset
-            printf("\033[0;37m"); //branco
+            change_color(37, 0); //branco
             print_coord(c_x - 1, c_y, '<');
             print_coord(c_x + menu_itens->text_size, c_y, '>');
         }
@@ -446,11 +353,11 @@ void change_menu_selection(menu_struct *menu_itens, limits_struct limits, int se
 
 void switch_selection_state(menu_struct *menu_itens, limits_struct limits, int selection) {
     if(menu_itens[selection].state){
-        printf("\033[0m"); //reset
-        printf("\033[0;37m"); //branco
+        change_color(37, 0); //branco
     }
     else {
-        printf("\033[0;37m\033[41m"); //branco / fundo vermelho
+        
+        change_color(37, 41); //branco / fundo vermelho
     }
     menu_itens[selection].state = !menu_itens[selection].state;
     int c_x = (x_border_fin + x_border_init) / 2 - (menu_itens[selection].text_size / 2);
@@ -458,7 +365,6 @@ void switch_selection_state(menu_struct *menu_itens, limits_struct limits, int s
     for (int i = 0; i < menu_itens[selection].text_size; i++) {
         print_coord(c_x + i, c_y, menu_itens[selection].text[i]);
     }
-    printf("\033[0m"); //reset
 }
 
 int menu(){
@@ -508,12 +414,6 @@ int menu(){
     for (int i = 0; i < stars_count; i++){
         stars[i].visible = 0;
     }
-    
-    ws = window_size();
-    x_border_init = (ws.x - x_size) / 2;
-    x_border_fin = x_border_init + x_size;
-    y_border_init = (ws.y - y_size) / 2;
-    y_border_fin = y_border_init + y_size;
     print_tab();
 
     char title[450] = "       ____                                    / ___| _ __   __ _  ___ ___              \\___ \\| '_ \\ / _` |/ __/ _ \\              ___) | |_) | (_| | (_|  __/             |____/| .__/ \\__,_|\\___\\___|        ___        |_|          _               |_ _|_ ____   ____ _  __| | ___ _ __ ___  | || '_ \\ \\ / / _` |/ _` |/ _ \\ '__/ __| | || | | \\ V / (_| | (_| |  __/ |  \\__ \\|___|_| |_|\\_/ \\__,_|\\__,_|\\___|_|  |___/";
@@ -524,14 +424,14 @@ int menu(){
     limits[0].end_x = limits[0].start_x + 41;
     limits[0].end_y = limits[0].start_y + 10;
     limits[0].active = 1;
-    printf("\033[0;36m"); //ciano
+    change_color(36, 0); //ciano
     
     for (int i = 0; i < 10; i++) {
         for (int j = 0; j < 41; j++) {
             print_coord(limits[0].start_x + j, limits[0].start_y + i, title[i*41 + j]);
         }
     }
-    printf("\033[0;31m"); //vermelho
+    change_color(31, 0); //vermelho
     limits[1].start_x = (x_border_fin + x_border_init) / 2 - 15;
     limits[1].end_x = limits[1].start_x + 30;
     limits[1].end_y = y_border_fin - 4;
@@ -544,7 +444,7 @@ int menu(){
             else if ((y == limits[1].start_y && x >= limits[1].start_x + 1 && x <= limits[1].end_x - 1) || (y == limits[1].end_y && x >= limits[1].start_x && x <= limits[1].end_x))
                 print_coord(x, y, '_');
         }
-    printf("\033[0;37m"); //branco
+    change_color(37, 0); //branco
     for (int i = 0; i < 4; i++){
         int c_x = (x_border_fin + x_border_init) / 2 - (menu_itens[i].text_size / 2);
         int c_y = limits[1].start_y + (i * 3 + 3);
@@ -560,10 +460,10 @@ int menu(){
     
     
 
-    change_menu_selection(menu_itens, limits[1], menu_selection);
+    change_menu_selection(menu_itens, limits[1], menu_selection); //muda a opcao que fica selecionada no menu
     fflush(stdout);
-    start_t = get_time();
-    start_t2 = start_t;
+    start_t = get_time(); //contador de tempo para as estrelas
+    start_t2 = start_t; //contador de tempo para o cursor que pisca do menu
     while(1){
         ch = getchar();
         if(ch != EOF){
@@ -576,6 +476,10 @@ int menu(){
             if(!menu_state && ch == '\n' && menu_selection == 1) {
                 menu_state = 1;
             }
+
+
+
+
             if(!menu_state && ch == 'w' && menu_selection != 0) {
                 menu_selection--;
                 change_menu_selection(menu_itens, limits[1], menu_selection);
@@ -660,27 +564,17 @@ int menu(){
 }
 
 int main() {
-    system("clear");
-    printf("\e[?25l"); //desativar cursor
-    struct termios oldt, newt;
+    clear_screen();
+    nonblock_terminal();
+    visible_cusor(0);
     
-    int oldf;
-    tcgetattr(STDIN_FILENO, &oldt);
-    newt = oldt;
-    newt.c_lflag &= ~(ICANON | ECHO);
-    tcsetattr(STDIN_FILENO, TCSANOW, &newt);
-    oldf = fcntl(STDIN_FILENO, F_GETFL, 0);
-    fcntl(STDIN_FILENO, F_SETFL, oldf | O_NONBLOCK);
-
+    
     int m = menu();
     if(m == 1)
         main_game();
 
-
-    printf("\e[?25h"); //ativar cursor
-    printf("\033[0m"); //reset
-
-    tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
-    fcntl(STDIN_FILENO, F_SETFL, oldf);
-    system("clear");
+    change_color(0, 0); //reset
+    visible_cusor(1);
+    reset_terminal();
+    clear_screen();
 }
