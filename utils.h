@@ -38,4 +38,6 @@ void clear_screen();
 
 void msleep(int millis);
 
+int intlen(int i);
+
 #endif

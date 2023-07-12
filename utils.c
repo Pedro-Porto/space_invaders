@@ -6,6 +6,7 @@
 #include<stdlib.h>
 #include<stdio.h>
 #include<fcntl.h>
+#include<math.h>
 #include "utils.h"
 
 coord ws;
@@ -92,21 +93,7 @@ void define_borders() {
     y_border_fin = y_border_init + y_size;
 }
 
-void print_tab() {
-    system("clear");
-    define_borders();
-    printf("\033[0;31m"); //vermelho
-    for (int y = 0; y < ws.y; y++)
-        for (int x = 0; x < ws.x; x++) {
-            if ((x == x_border_init && y >= y_border_init && y <= y_border_fin) || (x == x_border_fin && y >= y_border_init && y <= y_border_fin))
-                putchar('#');
-            else if ((y == y_border_init && x >= x_border_init && x <= x_border_fin) || (y == y_border_fin && x >= x_border_init && x <= x_border_fin))
-                putchar('#');
-            else
-                putchar(' ');
-        }
-    fflush(stdout);
-}
+
 
 void visible_cusor(int state) {
     if(!state)
@@ -137,4 +124,24 @@ void clear_screen() {
 
 void msleep(int millis) {
     usleep(millis * 1000);
+}
+
+void print_tab() {
+    clear_screen();
+    define_borders();
+    printf("\033[0;31m"); //vermelho
+    for (int y = 0; y < ws.y; y++)
+        for (int x = 0; x < ws.x; x++) {
+            if ((x == x_border_init && y >= y_border_init && y <= y_border_fin) || (x == x_border_fin && y >= y_border_init && y <= y_border_fin))
+                putchar('#');
+            else if ((y == y_border_init && x >= x_border_init && x <= x_border_fin) || (y == y_border_fin && x >= x_border_init && x <= x_border_fin))
+                putchar('#');
+            else
+                putchar(' ');
+        }
+    fflush(stdout);
+}
+
+int intlen(int i) {
+    return floor(log10(abs(i))) + 1;
 }

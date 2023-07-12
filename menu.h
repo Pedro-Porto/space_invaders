@@ -2,6 +2,8 @@
 #define MENU_H_
 #include "utils.h"
 
+extern char name[20];
+
 typedef struct {
     int visible;
     coord position;

@@ -1,12 +1,5 @@
-#include<stdlib.h>
 #include<stdio.h>
-#include<time.h>
-#include<sys/ioctl.h>
-#include<unistd.h>
-#include<termios.h>
-#include<fcntl.h>
-#include<wchar.h>
-#include<sys/time.h>
+#include<stdlib.h>
 #include "utils.h"
 #include "game.h"
 #include "menu.h"
@@ -16,6 +9,12 @@ int main() {
     clear_screen();
     nonblock_terminal();
     visible_cusor(0);
+    // while(1){
+    //     char ch = getchar();
+    //     if(ch != EOF){
+    //         printf("%d", ch);
+    //     }
+    // }
     
     int m = menu();
     if(m == 1)
