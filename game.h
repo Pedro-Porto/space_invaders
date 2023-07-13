@@ -12,6 +12,7 @@ typedef struct {
 typedef struct {
     char sps[10];
     coord position;
+    int invencible;
     coord old_position;
     shot_struct shots[3];
 } ship_struct;

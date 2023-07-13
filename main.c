@@ -5,6 +5,7 @@
 #include "menu.h"
 
 
+
 int main() {
     clear_screen();
     nonblock_terminal();
@@ -16,9 +17,10 @@ int main() {
     //     }
     // }
     
-    int m = menu();
-    if(m == 1)
-        main_game();
+    // int m = menu();
+    // if(m == 1)
+    //     main_game();
+    main_game();
 
     change_color(0, 0); //reset
     visible_cusor(1);

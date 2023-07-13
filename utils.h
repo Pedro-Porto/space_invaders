@@ -40,4 +40,8 @@ void msleep(int millis);
 
 int intlen(int i);
 
+void prints_coord(int x, int y, char *c);
+
+void printi_coord(int x, int y, int i);
+
 #endif

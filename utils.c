@@ -56,6 +56,14 @@ void print_coord(int x, int y, char c) {
     printf("\033[%d;%dH%c", y + 1, x + 1, c);
 }
 
+void prints_coord(int x, int y, char *c) {
+    printf("\033[%d;%dH%s", y + 1, x + 1, c);
+}
+
+void printi_coord(int x, int y, int i) {
+    printf("\033[%d;%dH%d", y + 1, x + 1, i);
+}
+
 void change_color(int color, int bg) {
     /*
     Foreground:
