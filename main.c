@@ -16,12 +16,13 @@ int main() {
     //         printf("%d", ch);
     //     }
     // }
-    
-    // int m = menu();
-    // if(m == 1)
-    //     main_game();
-    main_game();
-
+    while(1){
+        int m = menu();
+        if(m == 1)
+            main_game();
+        else
+            break;
+    }
     change_color(0, 0); //reset
     visible_cusor(1);
     reset_terminal();

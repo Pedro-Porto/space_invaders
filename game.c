@@ -1,6 +1,9 @@
 #include<stdio.h>
+#include<string.h>
+#include<stdlib.h>
 #include "utils.h"
 #include "game.h"
+#include "menu.h"
 
 int aliens_x = 11;
 int aliens_y = 5;
@@ -29,12 +32,13 @@ ship_struct ship = {
 };
 
 char alien_img[4][20] = {
-    " \\ / |O O|/( )\\",
-    " / \\ (O O)/^ ^\\",
-    "\\ | /     / | \\",
-    "                 "
+    " \\ / |O O|/( )\\", // alien 1
+    " / \\ (O O)/^ ^\\", // alein 2
+    "\\ | /     / | \\", // alien explodido
+    "                 " // alien invisivel
 };
 
+// imprime a nave a partir de sua coordenada central
 void print_ship(int color) {
     if(ship.invencible)
         color = 33;
@@ -56,6 +60,7 @@ void print_ship(int color) {
     }
 }
 
+// funcao para imprimir cada alien a partir de sua coordenada central
 void print_alien(alien_struct *alien) {
     if(alien->visible){
         if(alien->type == 2)
@@ -74,6 +79,7 @@ void print_alien(alien_struct *alien) {
     }
 }
 
+// altera a posicao para cada um dos tiros da nave
 void print_shot() {
     for (int i = 0; i < 3; i++) {
         if(ship.shots[i].visible){
@@ -96,7 +102,7 @@ void print_shot() {
     
 }
 
-
+// cria os aliens
 void alien_constructor(alien_struct *aliens) {
     int mid = (x_border_fin + x_border_init) / 2;
     for (int y = 0; y < aliens_y; y++)
@@ -113,6 +119,7 @@ void alien_constructor(alien_struct *aliens) {
         }
 }
 
+// move os aliens e caso tenha chegado na borda, vai para baixo e altera a direcao
 void move_alien(int *alien_direction, alien_struct *aliens) {
     int al_max_coord = *alien_direction*1000; // 0 = direita; 1 = esquerda
     for (int i = 0; i < aliens_y*aliens_x; i++) {
@@ -147,6 +154,7 @@ void move_alien(int *alien_direction, alien_struct *aliens) {
     }
 }
 
+// altera a quantidade de naves representando a vida em cima da tela
 void change_life(int *life, ship_struct *ship) {
     coord old_position = ship->old_position;
     coord position = ship->position;
@@ -166,7 +174,7 @@ void change_life(int *life, ship_struct *ship) {
     ship->position = position;
 }
 
-
+// escolhe um alien aleatorio (apenas os mais de baixo) e coloca um tiro em baixo dele
 void create_alien_shot(shot_struct *alien_shot, alien_struct *aliens) {
     int column_count = 0;
     for (int x = 0; x < aliens_x; x++) {
@@ -197,16 +205,24 @@ void create_alien_shot(shot_struct *alien_shot, alien_struct *aliens) {
     }
 }
 
-void move_alien_shot(shot_struct *alien_shot) {
+// Move cada tiro dos aliens uma coordenada e verifica se houve colisão com a nave ou com a borda
+void move_alien_shot(shot_struct *alien_shot, ship_struct *ship, int *lifes, double *start_t3) {
     for (int i = 0; i < 10; i++) {
         if(alien_shot[i].visible){
             change_color(35, 0);
             print_coord(alien_shot[i].position.x, alien_shot[i].position.y, ' ');
-            if(alien_shot[i].position.y + 1 < y_border_fin){
+            if(!ship->invencible && alien_shot[i].position.x <= ship->position.x + 3 && alien_shot[i].position.x >= ship->position.x - 3 && alien_shot[i].position.y >= ship->position.y - 1 && alien_shot[i].position.y <= ship->position.y + 1){ // verifica colisao com a nave
+                *lifes -= 1;
+                change_life(lifes, ship);
+                *start_t3 = get_time();
+                ship->invencible = 1;
+                alien_shot[i].visible = 0;
+            }
+            else if(alien_shot[i].position.y + 1 < y_border_fin){ // move para frente
                 alien_shot[i].position.y++;
                 print_coord(alien_shot[i].position.x, alien_shot[i].position.y, '|');
             }
-            else {
+            else { //chegou na borda
                 alien_shot[i].visible = 0;
             }
             
@@ -215,6 +231,100 @@ void move_alien_shot(shot_struct *alien_shot) {
     
 }
 
+int compare(const void *a, const void *b) {
+    score_struct *orderA = (score_struct *)a;
+    score_struct *orderB = (score_struct *)b;
+    return (orderB->points - orderA->points);
+}
+
+
+void save_score(int points) {
+    score_struct h_scores[12];
+    FILE *hs = fopen("highscore.txt", "r");
+    if(hs == NULL){
+        reset_terminal();
+        visible_cusor(1);
+        clear_screen();
+        perror("Error in file: ");
+        exit(1);
+    }
+    char player[20];
+    int score;
+    int count = 0;
+    int inserted = 0;
+    while (fscanf(hs, "%s %d", player, &score) != EOF) {
+        if(strcmp(player, name)){
+            strcpy(h_scores[count].player, player);
+            h_scores[count].points = score;
+        }
+        else if(points > score){
+            strcpy(h_scores[count].player, player);
+            h_scores[count].points = points;
+            inserted = 1;
+        }
+        else {
+            strcpy(h_scores[count].player, player);
+            h_scores[count].points = score;
+            inserted = 1;
+        }
+        count++;
+    }
+    if(!inserted){
+        strcpy(h_scores[count].player, name);
+        h_scores[count].points = points;
+        count++;
+    }
+    fclose(hs);
+    qsort(h_scores, count, sizeof(score_struct), compare);
+    FILE *hsw = fopen("highscore.txt", "w");
+    for (int i = 0; i < (count > 10 ? 10 : count); i++) {
+        fprintf(hsw, "%s %d\n", h_scores[i].player, h_scores[i].points);
+    }
+    fclose(hsw);
+}
+
+
+void end_game(int points) {
+    fflush(stdout);
+    print_tab();
+    int start_x = (x_border_fin + x_border_init) / 2 - 25;
+    int start_y = (y_border_fin + y_border_init) / 2 - 6;
+    int end_x = start_x + 50;
+    int end_y = start_y + 12;
+    char go[20] = "Game over!";
+    char po[20] = "Your score was:";
+    char ct[25] = "Press enter to continue";
+
+    for (int y = y_border_init; y < y_border_fin; y++)
+        for (int x = x_border_init; x < x_border_fin; x++) {
+                if ((x == start_x && y >= start_y + 1 && y <= end_y) || (x == end_x && y >= start_y + 1 && y <= end_y))
+                    print_coord(x, y, '|');
+                else if ((y == start_y && x >= start_x + 1 && x <= end_x - 1) || (y == end_y && x >= start_x && x <= end_x))
+                    print_coord(x, y, '_');
+            }
+    change_color(36, 0);
+    prints_coord((start_x + end_x)/2 - strlen(go) / 2, start_y + 2, go);
+    prints_coord((start_x + end_x)/2 - strlen(po) / 2, start_y + 5, po);
+    change_color(33, 0);
+    printi_coord((start_x + end_x)/2 - intlen(points) / 2, start_y + 7, points);
+    change_color(37, 41);
+    prints_coord((start_x + end_x)/2 - strlen(ct) / 2, start_y + 10, ct);
+    change_color(0, 0);
+    fflush(stdout);
+    msleep(10);
+    save_score(points);
+    while(1) {
+        char ch = getchar();
+        if(ch != EOF){
+            if(ch == '\n') {
+                return;
+            }
+        }
+        msleep(10);
+    }
+}
+
+// loop do jogo
 void main_game() {
     double start_t, start_t2, start_t3, start_t4, start_t5, end_t;
     int ch;
@@ -229,7 +339,6 @@ void main_game() {
         alien_shot[i].visible = 0;
         alien_shot[i].old_position = (coord){0, 0};
     }
-    
 
     print_tab();
 
@@ -297,7 +406,7 @@ void main_game() {
         }
         if(end_t - start_t5 >= 0.1){
             start_t5 = get_time();
-            move_alien_shot(alien_shot);
+            move_alien_shot(alien_shot, &ship, &lifes, &start_t3);
         }
         if(ship.invencible && end_t - start_t3 >= 0.3){
             ship.invencible++;
@@ -361,6 +470,10 @@ void main_game() {
             else 
                 alien_speed = 0.3;
         }
+        if(lifes <= 0) {
+            break;
+        }
         msleep(1);
     }
+    end_game(points);
 }

@@ -4,6 +4,7 @@
         "time.h": "c",
         "ioctl.h": "c",
         "utils.h": "c",
-        "termios.h": "c"
+        "termios.h": "c",
+        "menu.h": "c"
     }
 }

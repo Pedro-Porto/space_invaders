@@ -25,6 +25,11 @@ typedef struct {
     int time_count;
 } alien_struct;
 
+typedef struct {
+        char player[30];
+        int points;
+} score_struct;
+
 void main_game();
 
 #endif
