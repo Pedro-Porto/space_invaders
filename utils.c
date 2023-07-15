@@ -19,6 +19,7 @@ int y_size = 45;
 struct termios oldt;
 int oldf;
 
+// retorna o tamanho da janela do terminal em caracteres
 coord window_size() {
     struct winsize w;
     ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
@@ -39,12 +40,14 @@ unsigned long mix(unsigned long a, unsigned long b, unsigned long c) {
     return c;
 }
 
+// numero aleatorio dentro de um range de numeros
 int rand_range(int minimum_number, int max_number){
     unsigned long seed = mix(clock(), time(NULL), getpid());
     srand(seed);
     return rand() % (max_number + 1 - minimum_number) + minimum_number;
 }
 
+// retorna o tempo do sistema em segundos
 double get_time() {
     struct timeval  tv;
     gettimeofday(&tv, NULL);
@@ -52,18 +55,22 @@ double get_time() {
     return t/1000;
 }
 
+// imprime um caractere na coordenada da tela
 void print_coord(int x, int y, char c) {
     printf("\033[%d;%dH%c", y + 1, x + 1, c);
 }
 
+// imprime uma string na coordenada da tela
 void prints_coord(int x, int y, char *c) {
     printf("\033[%d;%dH%s", y + 1, x + 1, c);
 }
 
+// imprime um int na coordenada da tela
 void printi_coord(int x, int y, int i) {
     printf("\033[%d;%dH%d", y + 1, x + 1, i);
 }
 
+// muda a cor do texto do terminal
 void change_color(int color, int bg) {
     /*
     Foreground:
@@ -93,6 +100,7 @@ void change_color(int color, int bg) {
         printf("\033[0;%dm", color);
 }
 
+// define as bordas do jogo (#)
 void define_borders() {
     ws = window_size();
     x_border_init = (ws.x - x_size) / 2;
@@ -102,7 +110,7 @@ void define_borders() {
 }
 
 
-
+// altera o estado do cursor entre visivel e invisivel
 void visible_cusor(int state) {
     if(!state)
         printf("\e[?25l"); //desativar cursor
@@ -110,7 +118,7 @@ void visible_cusor(int state) {
         printf("\e[?25h"); //ativar cursor
 }
 
-
+// define o stdin como non block (nao espera a tecla para retornar)
 void nonblock_terminal() {
     struct termios newt;
     tcgetattr(STDIN_FILENO, &oldt);
@@ -121,19 +129,23 @@ void nonblock_terminal() {
     fcntl(STDIN_FILENO, F_SETFL, oldf | O_NONBLOCK);
 }
 
+// coloca o terminal no modo padrao
 void reset_terminal() {
     tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
     fcntl(STDIN_FILENO, F_SETFL, oldf);
 }
 
+// limpa a tela
 void clear_screen() {
     system("clear");
 }
 
+// agurda o tempo definido em milisegundos
 void msleep(int millis) {
     usleep(millis * 1000);
 }
 
+// imprime as bordas do jogo
 void print_tab() {
     clear_screen();
     define_borders();
@@ -150,6 +162,7 @@ void print_tab() {
     fflush(stdout);
 }
 
+// retorna o tamnho de um int caso ele fosse uma string
 int intlen(int i) {
     return floor(log10(abs(i))) + 1;
 }

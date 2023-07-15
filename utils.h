@@ -18,17 +18,17 @@ extern int oldf;
 
 coord window_size();
 
-int rand_range(int minimum_number, int max_number);
+int rand_range(int, int);
 
 double get_time();
-
-void print_coord(int x, int y, char c);
+// coor
+void print_coord(int, int, char);
 
 void print_tab();
 
-void change_color(int color, int bg);
+void change_color(int, int);
 
-void visible_cusor(int state);
+void visible_cusor(int);
 
 void nonblock_terminal();
 
@@ -36,12 +36,12 @@ void reset_terminal();
 
 void clear_screen();
 
-void msleep(int millis);
+void msleep(int);
 
-int intlen(int i);
+int intlen(int);
 
-void prints_coord(int x, int y, char *c);
+void prints_coord(int, int, char*);
 
-void printi_coord(int x, int y, int i);
+void printi_coord(int, int, int);
 
 #endif

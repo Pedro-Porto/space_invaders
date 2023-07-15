@@ -5,17 +5,10 @@
 #include "menu.h"
 
 
-
 int main() {
     clear_screen();
     nonblock_terminal();
     visible_cusor(0);
-    // while(1){
-    //     char ch = getchar();
-    //     if(ch != EOF){
-    //         printf("%d", ch);
-    //     }
-    // }
     while(1){
         int m = menu();
         if(m == 1)

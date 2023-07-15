@@ -6,7 +6,6 @@ typedef struct {
     int visible;
     coord position;
     coord old_position;
-    
 } shot_struct;
 
 typedef struct {
