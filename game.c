@@ -454,7 +454,6 @@ void main_game() {
                     }
                     
                 }
-
                 for (int j = 0; j < 3; j++) {
                     if(aliens[i].type != 2 && aliens[i].type != 3 && ship.shots[j].visible && ship.shots[j].position.x >= aliens[i].position.x - 2 && ship.shots[j].position.x <= aliens[i].position.x + 2 && ship.shots[j].position.y >= aliens[i].position.y - 1 && ship.shots[j].position.y <= aliens[i].position.y + 1){
                         ship.shots[j].visible = 0; //imprimir o tiro de novo

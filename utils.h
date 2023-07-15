@@ -21,7 +21,7 @@ coord window_size();
 int rand_range(int, int);
 
 double get_time();
-// coor
+
 void print_coord(int, int, char);
 
 void print_tab();
