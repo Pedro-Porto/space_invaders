@@ -1,6 +1,6 @@
 # Space Invaders
 
-Compilation:
+Compilation (Ubuntu):
     gcc main.c utils.c game.c menu.c -lm -o m
 
 How to use:
