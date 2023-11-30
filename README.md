@@ -1,7 +1,6 @@
 # Space Invaders
 
-Compilation (Ubuntu):
-    gcc main.c utils.c game.c menu.c -lm -o m
+- Works only on unix.
 
 How to use:
 - Use W A S D to move
