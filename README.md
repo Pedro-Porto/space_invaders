@@ -1,6 +1,6 @@
 # Space Invaders
 
-- Works only on unix.
+- Works only on linux.
 
 How to use:
 - Use W A S D to move
